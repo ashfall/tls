@@ -8,7 +8,16 @@ from tls.hello_message import (
 """
 1. Send ClientHello
 2. Send ServerHello
+3. Send ServerHelloDone
+4. Send ClientKeyExchange
+
+TODO: Look at Cryptography to see how the encryption algorithm will work.
 """
+
+class ServerHelloDone(object):
+    """
+    Just to represent a ServerHelloDone object.
+    """
 
 def test_start_handshaking():
     client_hello_bytes = (
@@ -28,7 +37,7 @@ def test_start_handshaking():
     st()
     client_hello = parse_client_hello(client_hello_bytes)
     assert isinstance(client_hello, ClientHello)
-    # Successfully parsed Client Hello
+    print "ClientHello sent"
 
     server_hello_bytes= (
         b'\x03\x00'
@@ -50,12 +59,8 @@ def test_start_handshaking():
 
     server_hello = parse_server_hello(server_hello_bytes)
     assert isinstance(server_hello, ServerHello)
+    print "Successfully generated ServerHello after receiveing the ClientHello message."
 
-
-
-
-
-
-
-if __name__ == '__main__':
-    test_start_handshake()
+    server_hello_done = ServerHelloDone()  # Don't really need to write it this way, sorry about the extra object
+    assert isinstance(server_hello_done, ServerHelloDone)
+    print "ServerHelloDone."
