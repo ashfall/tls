@@ -19,6 +19,18 @@ class ServerHelloDone(object):
     Just to represent a ServerHelloDone object.
     """
 
+
+
+def _get_ClientKeyExchange_message(KeyExchangeAlgorithm):
+    if KeyExchangeAlgorithm == 'rsa':
+        exchange_keys = _get_EncryptedPreMasterSecret_struct()
+    elif KeyExchangeAlgorithm in ['dhe_dss', 'dhe_rsa', 'dh_dss', 'dh_rsa', 'dh_anon']:
+        exchange_keys = _get_ClientDiffieHellmanPublic_struct()
+    # No error handling because YOLO
+
+    # TODO: Pass exchange_keys to something that parses a ClientKeyExchange struct.
+
+
 def test_start_handshaking():
     client_hello_bytes = (
         b'\x03\x00'
@@ -39,7 +51,7 @@ def test_start_handshaking():
     assert isinstance(client_hello, ClientHello)
     print "ClientHello sent"
 
-    server_hello_bytes= (
+    server_hello_bytes = (
         b'\x03\x00'
         b'\x05\x06\x07\x08'
         b'9876543210987654321087654321'
@@ -50,7 +62,9 @@ def test_start_handshaking():
         server_hello_bytes += chr(len(s_id))
         server_hello_bytes += s_id
 
-    server_hello_bytes += client_hello.cipher_suites[0]     # Just pick one for now.
+    # Just pick one for now.
+    server_hello_bytes += client_hello.cipher_suites[0]
+
     # We don't compress things here.
     server_hello_bytes += '\x00'
 
@@ -61,6 +75,13 @@ def test_start_handshaking():
     assert isinstance(server_hello, ServerHello)
     print "Successfully generated ServerHello after receiveing the ClientHello message."
 
-    server_hello_done = ServerHelloDone()  # Don't really need to write it this way, sorry about the extra object
+    # Don't really need to write it this way, sorry about the extra object
+    server_hello_done = ServerHelloDone()
     assert isinstance(server_hello_done, ServerHelloDone)
     print "ServerHelloDone."
+
+    # Let's try to create a ClientKeyExchange object.
+    # XXX This should probably be factored out somehow.
+
+
+
