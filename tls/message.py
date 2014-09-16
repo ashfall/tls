@@ -101,5 +101,3 @@ def parse_pre_master_secret(bytes):
         ),
         random=construct.random_bytes,
     )
-
-
