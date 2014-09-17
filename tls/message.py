@@ -4,6 +4,8 @@ from enum import Enum
 
 from characteristic import attributes
 
+from six import BytesIO
+
 from tls import _constructs
 
 from tls.hello_message import ProtocolVersion
@@ -51,6 +53,13 @@ class SignatureAndHashAlgorithm(object):
     """
 
 
+@attributes(['certificate_list'])
+class Certificate(object):
+    """
+    An object representing a Certificate struct.
+    """
+
+
 @attributes(['client_version', 'random'])
 class PreMasterSecret(object):
     """
@@ -86,6 +95,28 @@ def parse_certificate_request(bytes):
     )
 
 
+def parse_certificate(bytes):
+    """
+    Parse a ``Certificate`` struct.
+
+    :param bytes: the bytes representing the input.
+    :return: Certificate object.
+    """
+    construct = _constructs.Certificate.parse(bytes)
+    # XXX: Find a better way to parse an array of variable-length objects
+    certificates = []
+    certificates_io = BytesIO(construct.certificates_bytes)
+
+    while certificates_io.tell() < construct.certificates_length:
+        certificate_construct = _constructs.ASN1Cert.parse_stream(
+            certificates_io
+        )
+        certificates.append(certificate_construct.asn1_cert)
+    return Certificate(
+        certificate_list=certificates
+    )
+
+
 def parse_pre_master_secret(bytes):
     """
     Parse a ``PreMasterSecret`` struct.
@@ -100,4 +131,3 @@ def parse_pre_master_secret(bytes):
             minor=construct.version.minor,
         ),
         random=construct.random_bytes,
-    )

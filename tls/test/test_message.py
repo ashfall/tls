@@ -3,8 +3,13 @@ from __future__ import absolute_import, division, print_function
 from tls.hello_message import ProtocolVersion
 
 from tls.message import (
+<<<<<<< HEAD
     ClientCertificateType, HashAlgorithm, PreMasterSecret, SignatureAlgorithm,
     parse_certificate_request, parse_pre_master_secret
+=======
+    Certificate, ClientCertificateType, HashAlgorithm, SignatureAlgorithm,
+    parse_certificate, parse_certificate_request
+>>>>>>> parse-certificate-message
 )
 
 
@@ -46,6 +51,7 @@ class TestCertificateRequestParsing(object):
         assert record.certificate_authorities == b'03'
 
 
+<<<<<<< HEAD
 class TestPreMasterSecretParsing(object):
     """
     Tests for parsing of PreMasterSecret struct.
@@ -64,3 +70,19 @@ class TestPreMasterSecretParsing(object):
         assert record.client_version.major == 3
         assert record.client_version.minor == 0
         assert record.random == r
+=======
+class TestCertificateParsing(object):
+    """
+    Tests for parsing of Certificate messages.
+    """
+
+    def test_parse_certificate(self):
+        packet = (
+            b'\x00\x00\x00\x07'  # certificate_length
+            b'\x00\x00\x00\x03'  # certificate_list.asn1_cert length
+            b'ABC'  # certificate_list.asn1_cert
+        )
+        record = parse_certificate(packet)
+        assert isinstance(record, Certificate)
+        assert record.certificate_list == [b'ABC']
+>>>>>>> parse-certificate-message
