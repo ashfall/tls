@@ -131,3 +131,4 @@ def parse_pre_master_secret(bytes):
             minor=construct.version.minor,
         ),
         random=construct.random_bytes,
+    )
