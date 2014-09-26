@@ -1,19 +1,24 @@
 import os
 
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
+
 from tls.hello_message import (
-    ClientHello, ServerHello,
-    parse_client_hello, parse_server_hello
+    ClientHello, ServerHello, parse_client_hello, parse_server_hello
 )
 
-from pdb import set_trace as st
+from pdb import set_trace as ST
 
 """
 1. Send ClientHello
 2. Send ServerHello
+# TODO: Send Certificate
 3. Send ServerHelloDone
 4. Send ClientKeyExchange
 
-TODO: Look at Cryptography to see how the encryption algorithm will work.
+XXX: Send the rsa public key in a message.
+TODO: Next, parse an EncryptedPreMasterSecret message with the RSA-encrypted data.
 """
 
 class ServerHelloDone(object):
@@ -74,16 +79,21 @@ def test_start_handshaking():
 
     # Just pick one for now.
     server_hello_bytes += client_hello.cipher_suites[0]
-
     # We don't compress things here.
     server_hello_bytes += '\x00'
-
     # No extensions.
     server_hello_bytes += '\x00\x00'
-
     server_hello = parse_server_hello(server_hello_bytes)
     assert isinstance(server_hello, ServerHello)
     print "Successfully generated ServerHello after receiveing the ClientHello message."
+
+    # Generate server's RSA key that the client can use.
+    server_rsa_private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048,
+        backend=default_backend()
+    )
+    server_rsa_public_key = private_key.public_key()
 
     # Don't really need to write it this way, sorry about the extra object
     server_hello_done = ServerHelloDone()
@@ -91,7 +101,19 @@ def test_start_handshaking():
     print "ServerHelloDone."
 
     # Let's try to create a ClientKeyExchange object.
-    # XXX This should probably be factored out somehow.
+    # 1. generate a 48-byte PreMasterSecret message.
+    # 2. Encrypt it using server_rsa_public_key
+    # 3. Parse the result in an encrypted premaster secret message.
 
+    r = os.urandom(46)
+    pre_master_secret_bytes = b'\x03\x00' + r
+    encrypted_pre_master_secret = server_rsa_public_key.encrypt(
+        pre_master_secret,
+        padding.PSS(
+            mgf=padding.MGF1(algorithm=hashes.SHA1()),
+            algorithm=hashes.SHA1(),
+            label=None
+        )
+    )
 
 
