@@ -22,6 +22,7 @@ class TestHandshakeFragmentBuffer(object):
             b'abcd'  # extensions.extensions.extension_data
         )
 
+
         client_hello_handshake_packet = (
             b'\x01'  # msg_type
             b'\x00\x00\x003'  # body length
@@ -34,10 +35,12 @@ class TestHandshakeFragmentBuffer(object):
             b'\x008'  # big-endian length
         ) + client_hello_handshake_packet
 
+        def _check_handshake_message(hs_bytes):
+            assert hs_bytes == client_hello_handshake_packet
+
         tls_plaintext_record = parse_tls_plaintext(packet)
-        buff = HandshakeBuffer()
+        buff = HandshakeBuffer(_check_handshake_message)
         handshake_struct = buff.buffer_handshake_if_fragmented(tls_plaintext_record)
-        assert handshake_struct == client_hello_handshake_packet
 
 
     def test_fragmented_message(self):
@@ -69,6 +72,6 @@ class TestHandshakeFragmentBuffer(object):
             b'\x008'  # big-endian length
         ) + client_hello_handshake_packet
 
-        hs_packet_1 = packet[:6]
-        hs_packet_2 = packet[6:]
+        hs_packet_1 = packet_1[:6]
+        hs_packet_2 = packet_1[6:]
 

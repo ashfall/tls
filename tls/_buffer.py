@@ -3,9 +3,10 @@ import struct
 from tls.record import ContentType
 
 class HandshakeBuffer(object):
-    def __init__(self):
+    def __init__(self, call_with_complete_handshake_message):
         self.handshake_bytes = b''
         self.waiting_for_next_fragment = False
+        self.call_with_complete_handshake_message = call_with_complete_handshake_message
 
     def buffer_handshake_if_fragmented(self, tls_plaintext):
         type = tls_plaintext.type
@@ -18,7 +19,7 @@ class HandshakeBuffer(object):
                     # We have the complete handshake bytes in our buffer, can
                     # parse now
                     self.waiting_for_next_fragment = False
-                    return self.handshake_bytes
+                    self.call_with_complete_handshake_message(self.handshake_bytes)
             else:
                 self.handshake_bytes = b''
                 handshake_message_type = fragment[0:1]
@@ -28,5 +29,5 @@ class HandshakeBuffer(object):
                 if len(handshake_body) < struct.unpack("!I", self.handshake_message_length)[0]:
                     self.waiting_for_next_fragment = True
                 else:
-                    return self.handshake_bytes
+                    self.call_with_complete_handshake_message(self.handshake_bytes)
 
