@@ -1,6 +1,6 @@
-from tls.record import parse_tls_plaintext
-
 from tls._buffer import HandshakeBuffer
+
+from tls.record import parse_tls_plaintext
 
 
 class TestHandshakeFragmentBuffer(object):
@@ -40,15 +40,17 @@ class TestHandshakeFragmentBuffer(object):
         """
         self.eb_flag = False
         self.cb_flag = False
+
         def check_handshake_message(hs_bytes):
             self.cb_flag = True
             assert hs_bytes == self.client_hello_handshake_packet
+
         def errback_insufficient_info():
             self.eb_flag = True
 
-
         tls_plaintext_record = parse_tls_plaintext(self.tls_plaintext_packet)
-        buff = HandshakeBuffer(check_handshake_message, errback_insufficient_info)
+        buff = HandshakeBuffer(check_handshake_message,
+                               errback_insufficient_info)
         buff.buffer_handshake_if_fragmented(tls_plaintext_record)
         assert self.cb_flag
         assert self.eb_flag is False
@@ -64,9 +66,9 @@ class TestHandshakeFragmentBuffer(object):
         def check_handshake_message(hs_bytes):
             self.cb_flag = True
             assert hs_bytes == self.client_hello_handshake_packet
+
         def errback_insufficient_info():
             self.eb_flag = True
-
 
         tls_plaintext_packet_fragment_1 = (
             b'\x16'     # type
@@ -90,7 +92,8 @@ class TestHandshakeFragmentBuffer(object):
             tls_plaintext_packet_fragment_2
         )
 
-        buff = HandshakeBuffer(check_handshake_message, errback_insufficient_info)
+        buff = HandshakeBuffer(check_handshake_message,
+                               errback_insufficient_info)
         buff.buffer_handshake_if_fragmented(tls_plaintext_record_1)
         assert self.cb_flag is False
         buff.buffer_handshake_if_fragmented(tls_plaintext_record_2)
@@ -116,7 +119,8 @@ class TestHandshakeFragmentBuffer(object):
         ) + self.client_hello_handshake_packet[:4]
 
         tls_plaintext_record = parse_tls_plaintext(tls_plaintext_packet)
-        buff = HandshakeBuffer(check_handshake_message, errback_insufficient_info)
+        buff = HandshakeBuffer(check_handshake_message,
+                               errback_insufficient_info)
         buff.buffer_handshake_if_fragmented(tls_plaintext_record)
         assert self.cb_flag is False
         assert self.eb_flag
