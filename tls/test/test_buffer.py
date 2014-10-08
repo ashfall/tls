@@ -176,10 +176,8 @@ class TestHandshakeFragmentBuffer(object):
                                errback_insufficient_info)
         buff.buffer_handshake_if_fragmented(tls_plaintext_record_1)
         assert self.cb_flag is False
-        assert self.eb_flag is False
         buff.buffer_handshake_if_fragmented(tls_plaintext_record_2)
         assert self.cb_flag is False
-        assert self.eb_flag is False
         buff.buffer_handshake_if_fragmented(tls_plaintext_record_3)
         assert self.cb_flag
         assert self.eb_flag is False
