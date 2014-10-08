@@ -124,3 +124,62 @@ class TestHandshakeFragmentBuffer(object):
         buff.buffer_handshake_if_fragmented(tls_plaintext_record)
         assert self.cb_flag is False
         assert self.eb_flag
+
+    def test_3_fragments(self):
+        """
+        When the handshake struct is split into more than 2 fragments.
+        XXX: Is this even possible?
+        """
+        self.eb_flag = False
+        self.cb_flag = False
+
+        def check_handshake_message(hs_bytes):
+            self.cb_flag = True
+            assert hs_bytes == self.client_hello_handshake_packet
+
+        def errback_insufficient_info():
+            self.eb_flag = True
+
+        tls_plaintext_packet_fragment_1 = (
+            b'\x16'     # type
+            b'\x03'     # major version
+            b'\x03'     # minor version
+            b'\x00\x06'       # length of fragment
+        ) + self.client_hello_handshake_packet[:6]
+        # includes msg_type + body length + 1 byte of the body
+
+        tls_plaintext_packet_fragment_2 = (
+            b'\x16'     # type
+            b'\x03'     # major version
+            b'\x03'     # minor version
+            b'\x00.'       # length of fragment
+        ) + self.client_hello_handshake_packet[6:-4]
+
+        tls_plaintext_packet_fragment_3 = (
+            b'\x16'     # type
+            b'\x03'     # major version
+            b'\x03'     # minor version
+            b'\x00\x04'       # length of fragment
+        ) + self.client_hello_handshake_packet[-4:]
+
+        tls_plaintext_record_1 = parse_tls_plaintext(
+            tls_plaintext_packet_fragment_1
+        )
+        tls_plaintext_record_2 = parse_tls_plaintext(
+            tls_plaintext_packet_fragment_2
+        )
+        tls_plaintext_record_3 = parse_tls_plaintext(
+            tls_plaintext_packet_fragment_3
+        )
+
+        buff = HandshakeBuffer(check_handshake_message,
+                               errback_insufficient_info)
+        buff.buffer_handshake_if_fragmented(tls_plaintext_record_1)
+        assert self.cb_flag is False
+        assert self.eb_flag is False
+        buff.buffer_handshake_if_fragmented(tls_plaintext_record_2)
+        assert self.cb_flag is False
+        assert self.eb_flag is False
+        buff.buffer_handshake_if_fragmented(tls_plaintext_record_3)
+        assert self.cb_flag
+        assert self.eb_flag is False
