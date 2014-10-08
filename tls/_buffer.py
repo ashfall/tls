@@ -7,10 +7,11 @@ HANDSHAKE_BODY_START_INDEX = 5
 
 
 class HandshakeBuffer(object):
-    def __init__(self, call_with_complete_handshake_message):
+    def __init__(self, call_with_complete_handshake_message, errback_for_insufficient_info):
         self.handshake_bytes = b''
         self.waiting_for_next_fragment = False
         self.call_with_complete_handshake_message = call_with_complete_handshake_message
+        self.errback_for_insufficient_info = errback_for_insufficient_info
 
     def buffer_handshake_if_fragmented(self, tls_plaintext):
         type = tls_plaintext.type
@@ -26,6 +27,10 @@ class HandshakeBuffer(object):
                     self.call_with_complete_handshake_message(self.handshake_bytes)
                     self.handshake_bytes = b''
             else:
+                if len(fragment) < HANDSHAKE_BODY_START_INDEX:
+                    self.errback_for_insufficient_info()
+                    return None
+
                 self.handshake_bytes = b''
                 handshake_message_type = fragment[:HANDSHAKE_MESSAGE_LENGTH_START_INDEX]
                 self.handshake_message_length = fragment[HANDSHAKE_MESSAGE_LENGTH_START_INDEX:HANDSHAKE_BODY_START_INDEX]

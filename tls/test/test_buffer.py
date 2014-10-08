@@ -38,26 +38,35 @@ class TestHandshakeFragmentBuffer(object):
         The case when the handshake struct is not fragmented, and is carried in
         in a TLSPlaintext message.
         """
+        self.eb_flag = False
         self.cb_flag = False
-        def _check_handshake_message(hs_bytes):
+        def check_handshake_message(hs_bytes):
             self.cb_flag = True
             assert hs_bytes == self.client_hello_handshake_packet
+        def errback_insufficient_info():
+            self.eb_flag = True
+
 
         tls_plaintext_record = parse_tls_plaintext(self.tls_plaintext_packet)
-        buff = HandshakeBuffer(_check_handshake_message)
+        buff = HandshakeBuffer(check_handshake_message, errback_insufficient_info)
         buff.buffer_handshake_if_fragmented(tls_plaintext_record)
         assert self.cb_flag
+        assert self.eb_flag is False
 
     def test_fragmented_message(self):
         """
         Put together the Handshake struct when it is fragmented *after* the
         "body length" field.
         """
+        self.eb_flag = False
         self.cb_flag = False
 
-        def _check_handshake_message(hs_bytes):
+        def check_handshake_message(hs_bytes):
             self.cb_flag = True
             assert hs_bytes == self.client_hello_handshake_packet
+        def errback_insufficient_info():
+            self.eb_flag = True
+
 
         tls_plaintext_packet_fragment_1 = (
             b'\x16'     # type
@@ -81,8 +90,33 @@ class TestHandshakeFragmentBuffer(object):
             tls_plaintext_packet_fragment_2
         )
 
-        buff = HandshakeBuffer(_check_handshake_message)
+        buff = HandshakeBuffer(check_handshake_message, errback_insufficient_info)
         buff.buffer_handshake_if_fragmented(tls_plaintext_record_1)
         assert self.cb_flag is False
         buff.buffer_handshake_if_fragmented(tls_plaintext_record_2)
         assert self.cb_flag
+        assert self.eb_flag is False
+
+    def test_insufficient_info_in_fragment(self):
+        self.eb_flag = False
+        self.cb_flag = False
+
+        def check_handshake_message(hs_bytes):
+            self.cb_flag = True
+            assert hs_bytes == self.client_hello_handshake_packet
+
+        def errback_insufficient_info():
+            self.eb_flag = True
+
+        tls_plaintext_packet = (
+            b'\x16'     # type
+            b'\x03'     # major version
+            b'\x03'     # minor version
+            b'\x00\x04'       # length of fragment
+        ) + self.client_hello_handshake_packet[:4]
+
+        tls_plaintext_record = parse_tls_plaintext(tls_plaintext_packet)
+        buff = HandshakeBuffer(check_handshake_message, errback_insufficient_info)
+        buff.buffer_handshake_if_fragmented(tls_plaintext_record)
+        assert self.cb_flag is False
+        assert self.eb_flag
