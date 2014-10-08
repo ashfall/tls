@@ -15,15 +15,16 @@ class HandshakeBuffer(object):
     def buffer_handshake_if_fragmented(self, tls_plaintext):
         type = tls_plaintext.type
         fragment = tls_plaintext.fragment
-        buffer_bytes = b''
+
         if type == ContentType.HANDSHAKE and fragment:
             if self.waiting_for_next_fragment:
                 self.handshake_bytes += fragment
-                if len(self.handshake_bytes) == self.handshake_message_length:
+                if len(self.handshake_bytes[HANDSHAKE_BODY_START_INDEX:]) == struct.unpack("!I", self.handshake_message_length)[0]:
                     # We have the complete handshake bytes in our buffer, can
                     # parse now
                     self.waiting_for_next_fragment = False
                     self.call_with_complete_handshake_message(self.handshake_bytes)
+                    self.handshake_bytes = b''
             else:
                 self.handshake_bytes = b''
                 handshake_message_type = fragment[:HANDSHAKE_MESSAGE_LENGTH_START_INDEX]
@@ -34,4 +35,7 @@ class HandshakeBuffer(object):
                     self.waiting_for_next_fragment = True
                 else:
                     self.call_with_complete_handshake_message(self.handshake_bytes)
-
+        else:
+            pass
+            # TODO: Figure out buffering when the message being carried is not
+            # a Handshake struct.
