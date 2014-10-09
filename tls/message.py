@@ -300,6 +300,7 @@ def parse_handshake_struct(bytes):
         msg_type=HandshakeType(construct.msg_type),
         length=construct.length,
         body=_get_handshake_message(
-            HandshakeType(construct.msg_type), construct.body
+            HandshakeType(construct.msg_type),
+            construct.body
         ),
     )

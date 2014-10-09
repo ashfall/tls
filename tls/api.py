@@ -73,9 +73,20 @@ class ClientTLS(object):
         write_to_wire_callback(tls_plaintext_record.as_bytes())
 
         # Create a Connection object and pass the ClientHello-Handshake struct to it.
-        conn = Connection(write_to_wire_callback)
+        conn = Connection(self, write_to_wire_callback)
         conn.handshake_msg_store[handshake.msg_type] = handshake
         return conn
+
+    def send_reply(self, last_handshake_msg_type, handshake_msg_store, write_to_wire_callback):
+        if last_handshake_msg_type == HandshakeType.SERVER_HELLO_DONE:
+            # Send Certificate*
+            # Send ClientKeyExchange*
+            # Send CertificateVerify*
+            # [ChangeCipherSpec]
+            # Send Finished
+
+        elif last_handshake_msg_type == HandshakeType.FINISHED:
+            # Go to APP_DATA state
 
 
 
@@ -89,19 +100,28 @@ class ServerTLS(object):
 
     def start(self, write_to_wire_callback, verify_callback=None):
         conn = Connection(write_to_wire_callback)
+        return conn
 
+    def send_reply(self, last_handshake_msg_type, handshake_msg_store, write_to_wire_callback):
+        if last_handshake_msg_type == HandshakeType.CLIENT_HELLO:
+            # Send ServerHello
+            # Send Certificate*
+            # Send ServerKeyExchange*
+            # Send CertificateRequest*
+            # Send ServerHelloDone
 
-
-
-
-
+        elif last_handshake_msg_type == HandshakeType.FINISHED:
+            # Send [ChangeCipherSpec]
+            # Send Finished
+            # Go to APP_DATA state
 
 
 
 class Connection(object):
 
-    def __init__(self, write_to_wire_callback):
+    def __init__(self, xTLS, write_to_wire_callback):
         self.write_to_wire_callback = write_to_wire_callback
+        self.xTLS = xTLS
         self.handshake_msg_store = {}
 
     def structure_bytes_from_wire(self, input_bytes):
@@ -114,6 +134,7 @@ class Connection(object):
         if tls_plaintext_record.type == ContentType.HANDSHAKE:
             handshake_struct = parse_handshake_struct(tls_plaintext_record.fragment)
             self.handshake_msg_store[handshake_struct.msg_type] = handshake_struct
+            self.xTLS.send_reply(handshake_struct.msg_type, self.handshake_msg_store, self.write_to_wire_callback)
 
 
     def construct_bytes_from_application_and_write_to_wire(self, output):
@@ -122,9 +143,3 @@ class Connection(object):
         """
         encrypted_output = encrypt_output_bytes_with_negotiated_cipher_suite
         self.write_to_wire_callback(encrypted_output)
-
-
-
-
-
-
