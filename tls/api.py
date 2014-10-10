@@ -95,8 +95,12 @@ class ServerTLS(object):
     The user will create this and pass to it the things needed to create a
     ServerHello object.
     """
-    def __init__(self):
-        pass
+    def __init__(self, major_version, minor_version, gmt_unix_time, session_id='', cipher_suites, compression_methods, extensions='')):
+        self.major_version = major_version
+        self.minor_version = minor_version
+        self.gmt_unix_time = gmt_unix_time      # TODO:Figure out how togenerate this
+        self.random_bytes = os.urandom(28)
+        self.session_id = session_id            # We don't support session resumption yet.
 
     def start(self, write_to_wire_callback, verify_callback=None):
         conn = Connection(write_to_wire_callback)
@@ -105,10 +109,61 @@ class ServerTLS(object):
     def send_reply(self, last_handshake_msg_type, handshake_msg_store, write_to_wire_callback):
         if last_handshake_msg_type == HandshakeType.CLIENT_HELLO:
             # Send ServerHello
+            client_hello = handshake_msg_store[HandshakeType.CLIENT_HELLO]
+            server_hello = ServerHello(
+                server_version=ProtocolVersion(
+                    major=self.major_version,
+                    minor=self.minor_version
+                ),
+                random=Random(
+                    gmt_unix_time=self.gmt_unix_time,
+                    random_bytes=self.random_bytes
+                ),
+                session_id=self.session_id,
+                cipher_suite=self.cipher_suite,                    # TODO: This needs to be picked from ClientHello.cipher_suites
+                compression_methods=CompressionMethod.NULL,        # We don't support Compression
+                extensions=self.extensions,
+            )
+            server_hello_as_bytes = server_hello.as_bytes()
+            handshake = Handshake(
+                msg_type=HandshakeType.SERVER_HELLO,
+                length=len(server_hello_as_bytes),
+                body=server_hello
+            )
+            tls_plaintext_record = TLSPlaintext(
+                type=ContentType.HANDSHAKE,
+                version=ProtocolVersion(
+                    major=self.major_version,
+                    minor=self.minor_version
+                ),
+                fragment=handshake.as_bytes()   # TODO: Implement fragmentation mechanism here.
+            )
+            write_to_wire_callback(tls_plaintext_record.as_bytes())
+            handshake_msg_store[HandshakeType.SERVER_HELLO] = handshake
+
+
             # Send Certificate*
             # Send ServerKeyExchange*
             # Send CertificateRequest*
+
+
             # Send ServerHelloDone
+            server_hello_done = ServerHelloDone()
+            handshake = Handshake(
+                msg_type=Handshake.SERVER_HELLO_DONE,
+                length=len(server_hello_done.as_bytes()),
+                body=server_hello_done
+            )
+            tls_plaintext_record = TLSPlaintext(
+                type=ContentType.HANDSHAKE,
+                version=ProtocolVersion(
+                    major=self.major_version,
+                    minor=self.minor_version
+                ),
+                fragment=handshake.as_bytes()
+            )
+            handshake_msg_store[HandshakeType.SERVER_HELLO_DONE] = handshake
+
 
         elif last_handshake_msg_type == HandshakeType.FINISHED:
             # Send [ChangeCipherSpec]
