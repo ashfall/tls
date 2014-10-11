@@ -2,6 +2,14 @@ from __future__ import absolute_import, division, print_function
 
 import os
 
+import struct
+
+from cryptography.hazmat.backends import default_backend
+
+from cryptography.hazmat.primitives import hashes
+
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
+
 from tls.hello_message import ClientHello, ProtocolVersion
 
 from tls.message import Handshake, HandshakeType
@@ -81,6 +89,19 @@ class ClientTLS(object):
         if last_handshake_msg_type == HandshakeType.SERVER_HELLO_DONE:
             # Send Certificate*
             # Send ClientKeyExchange*
+                # Say server_public_key is obtained from the ServerKeyExchange message somehow.
+                # Case RSA:
+                r = os.urandom(46)
+                pre_master_secret_bytes = struct.pack('!B', self.major_version) + struct.pack('!B', self.minor_version) + r
+                encrypted_pre_master_secret = server_public_key.encrypt(
+                    pre_master_secret_bytes,
+                    padding.PSS(
+                        mgf=padding.MGF1(algorithm=hashes.SHA1()),
+                        algorithm=hashes.SHA1(),
+                        label=None
+                    )
+                )
+
             # Send CertificateVerify*
             # [ChangeCipherSpec]
             # Send Finished
@@ -101,6 +122,12 @@ class ServerTLS(object):
         self.gmt_unix_time = gmt_unix_time      # TODO:Figure out how togenerate this
         self.random_bytes = os.urandom(28)
         self.session_id = session_id            # We don't support session resumption yet.
+        self.rsa_private_key = rsa.generate_private_keyt(
+            public_exponent=65537,
+            key_size=2048,
+            backend=default_backend()
+        )
+        self.rsa_public_key = self.rsa_private_key.public_key()
 
     def start(self, write_to_wire_callback, verify_callback=None):
         conn = Connection(write_to_wire_callback)
@@ -144,6 +171,7 @@ class ServerTLS(object):
 
             # Send Certificate*
             # Send ServerKeyExchange*
+                # Sends over self.rsa_public_key somehow.
             # Send CertificateRequest*
 
 
