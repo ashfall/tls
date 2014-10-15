@@ -172,6 +172,29 @@ class ServerTLS(object):
             # Send Certificate*
             # Send ServerKeyExchange*
                 # Sends over self.rsa_public_key somehow.
+            server_ecdh_parameters = ServerECDHParams(
+                parameters=ECParameters(
+                    curve_type=CurveTypes.NAMED_CURVE,
+                    namedcurve=NamedCurve.SECT163K1,
+                ),
+                point=ECPoint(
+                    b"\x04" +
+                    ecdh_public_key.x.to_bytes("big") +
+                    ecdh_public_key.y.to_bytes("big")
+                ),
+            )
+            signer = private_key.signer(
+                padding.PKCS1v15(),
+                hashes.SHA1(),
+            )
+            signer.update(client_hello.random)
+            signer.update(server_hello.random)
+            signer.update(server_ecdh_parameters.as_bytes())
+            signature = signer.finalize()
+            server_key_exchange = ServerKeyExchange(
+                params=server_ecdh_parameters,
+                signed_params=signature,
+            )
             # Send CertificateRequest*
 
 
