@@ -15,6 +15,10 @@ from tls.hello_message import (
 )
 
 
+class ChangeCipherSpec(Enum):
+    CHANGE_CIPHER_SPEC = 1
+
+
 class ClientCertificateType(Enum):
     RSA_SIGN = 1
     DSS_SIGN = 2
@@ -102,6 +106,12 @@ class CertificateRequest(object):
         ))
 
 
+@attributes(['verify_data'])
+class Finished(object):
+    def as_bytes(self):
+        return self.verify_data
+
+
 @attributes(['hash', 'signature'])
 class SignatureAndHashAlgorithm(object):
     """
@@ -121,6 +131,12 @@ class PreMasterSecret(object):
     """
     An object representing a PreMasterSecret struct.
     """
+
+
+@attributes(['exchange_keys'])
+class ClientKeyExchange(object):
+    def as_bytes(self):
+        return self.exchange_keys
 
 
 @attributes(['asn1_cert'])
@@ -160,7 +176,8 @@ class Handshake(object):
         if self.msg_type in [
             HandshakeType.SERVER_HELLO, HandshakeType.CLIENT_HELLO,
             HandshakeType.CERTIFICATE, HandshakeType.CERTIFICATE_REQUEST,
-            HandshakeType.HELLO_REQUEST, HandshakeType.SERVER_HELLO_DONE
+            HandshakeType.HELLO_REQUEST, HandshakeType.SERVER_HELLO_DONE,
+            HandshakeType.FINISHED, HandshakeType.CLIENT_KEY_EXCHANGE,
         ]:
             _body_as_bytes = self.body.as_bytes()
         else:
@@ -278,8 +295,6 @@ def _get_handshake_message(msg_type, body):
             return ServerHelloDone()
         elif msg_type in [HandshakeType.SERVER_KEY_EXCHANGE,
                           HandshakeType.CERTIFICATE_VERIFY,
-                          HandshakeType.CLIENT_KEY_EXCHANGE,
-                          HandshakeType.FINISHED
                           ]:
             raise NotImplementedError
         else:
