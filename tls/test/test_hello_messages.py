@@ -75,6 +75,7 @@ class TestClientHello(object):
     def test_parse_client_hello_extensions(self):
         record = parse_client_hello(self.extensions_packet)
         assert len(record.extensions) == 1
+        assert record.session_id == b''
         assert record.extensions[0].type == ExtensionType.SIGNATURE_ALGORITHMS
         assert record.extensions[0].data == b'abcd'
 
