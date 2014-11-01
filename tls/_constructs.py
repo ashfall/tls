@@ -137,6 +137,7 @@ PreMasterSecret = Struct(
     Bytes("random_bytes", 46),
 )
 
+
 ASN1Cert = Struct(
     "ASN1Cert",
     UBInt32("length"),   # TODO: Reject packets with length not in 1..2^24-1
