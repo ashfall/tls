@@ -55,6 +55,10 @@ class HandshakeType(Enum):
     FINISHED = 20
 
 
+class ChangeCipherSpec(Enum):
+    CHANGE_CIPHER_SPEC = 1
+
+
 class HelloRequest(object):
     """
     An object representing a HelloRequest struct.

@@ -34,6 +34,20 @@ class TestTLSPlaintextParsing(object):
         assert record.version.minor == 3
         assert record.fragment == b'0123456789'
 
+    def test_tls_plaintext_change_cipher_suite(self):
+        packet = (
+            b'\x14'
+            b'\x03'
+            b'\x03'
+            b'\x00\x01'
+            b'1'
+        )
+        record = parse_tls_plaintext(packet)
+        assert record.type == ContentType.CHANGE_CIPHER_SPEC
+        assert record.version.major == 3
+        assert record.version.minor == 3
+        assert record.fragment == 1
+
     def test_parse_tls_plaintext_wrong_type(self):
         """
         Raise an error when the type is not one of those defined in ContentType
