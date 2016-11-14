@@ -132,7 +132,7 @@ class TestClientHello(object):
             ClientHello.from_bytes(self.compression_methods_too_short_packet)
         assert exc_info.value.args == ('invalid object', 0)
 
-    def test_as_bytes_client_hello_compression_methosds_too_short(self):
+    def test_as_bytes_client_hello_compression_methods_too_short(self):
         """
         :py:func:`tls.hello_message.ClientHello` fails to construct a
         packet whose ``compression_methods`` would be too short.
