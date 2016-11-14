@@ -86,17 +86,6 @@ ServerNameList = Struct(
     Array(lambda ctx: ctx.length, ServerName),
 )
 
-Extension = Struct(
-    "extensions",
-    UBInt16("type"),
-    *EnumSwitch(type_field=UBInt16("type"),
-                type_enum=enums.ExtensionType,
-                value_field="data",
-                value_choices={
-                    enums.ExtensionType.SERVER_NAME: ServerName,
-    })
-)
-
 ClientHello = Struct(
     "ClientHello",
     ProtocolVersion,
@@ -141,6 +130,17 @@ SupportedSignatureAlgorithms = Struct(
         lambda ctx: ctx.supported_signature_algorithms_length / 2,
         SignatureAndHashAlgorithm,
     ),
+)
+
+Extension = Struct(
+    "extensions",
+    *EnumSwitch(type_field=UBInt16("type"),
+                type_enum=enums.ExtensionType,
+                value_field="data",
+                value_choices={
+                    enums.ExtensionType.SERVER_NAME.value: ServerName,
+                    enums.ExtensionType.SIGNATURE_ALGORITHMS.value: SupportedSignatureAlgorithms,
+    })
 )
 
 DistinguishedName = Struct(
