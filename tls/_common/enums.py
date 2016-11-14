@@ -120,7 +120,6 @@ class ExtensionType(Enum):
     #                      2017-02-04) [draft-ietf-tokbind-negotiation]
     CACHED_INFO = 25
     RENEGOTIATION_INFO = 65281
-    # XXX: See http://tools.ietf.org/html/rfc5246#ref-TLSEXT
 
 
 class CompressionMethod(Enum):

@@ -9,9 +9,11 @@ from functools import partial
 from construct import (Array, Bytes, PascalString, Struct, UBInt16, UBInt32,
                        UBInt8)
 
-from tls._common._constructs import (EnumClass, PrefixedBytes, SizeAtLeast,
-                                     SizeAtMost, SizeWithin, TLSPrefixedArray,
-                                     UBInt24)
+from tls._common import enums
+
+from tls._common._constructs import (EnumClass, EnumSwitch, PrefixedBytes,
+                                     SizeAtLeast, SizeAtMost, SizeWithin,
+                                     TLSPrefixedArray, UBInt24)
 
 from tls.ciphersuites import CipherSuites
 
@@ -66,12 +68,6 @@ CompressionMethods = Struct(
     Array(lambda ctx: ctx.length, UBInt8("compression_methods"))
 )
 
-Extension = Struct(
-    "extensions",
-    UBInt16("type"),
-    PrefixedBytes("data", UBInt16("length")),
-)
-
 ServerName = Struct(
     "server_name_list",
     UBInt8("name_type"),
@@ -88,6 +84,17 @@ ServerNameList = Struct(
     "ServerNameList",
     SizeAtLeast(UBInt16("length"), min_size=1),
     Array(lambda ctx: ctx.length, ServerName),
+)
+
+Extension = Struct(
+    "extensions",
+    UBInt16("type"),
+    *EnumSwitch(type_field=UBInt16("type"),
+                type_enum=enums.ExtensionType,
+                value_field="data",
+                value_choices={
+                    enums.ExtensionType.SERVER_NAME: ServerName,
+    })
 )
 
 ClientHello = Struct(
