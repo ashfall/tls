@@ -6,7 +6,8 @@ from __future__ import absolute_import, division, print_function
 
 from functools import partial
 
-from construct import Array, Bytes, Struct, UBInt16, UBInt32, UBInt8
+from construct import (Array, Bytes, PascalString, Struct, UBInt16, UBInt32,
+                       UBInt8)
 
 from tls._common._constructs import (EnumClass, PrefixedBytes, SizeAtLeast,
                                      SizeAtMost, SizeWithin, TLSPrefixedArray,
@@ -59,7 +60,6 @@ SessionID = Struct(
     PrefixedBytes("session_id"),
 )
 
-
 CompressionMethods = Struct(
     "compression_methods",
     SizeAtLeast(UBInt8("length"), min_size=1),
@@ -70,6 +70,24 @@ Extension = Struct(
     "extensions",
     UBInt16("type"),
     PrefixedBytes("data", UBInt16("length")),
+)
+
+ServerName = Struct(
+    "server_name_list",
+    UBInt8("name_type"),
+    PascalString("name", length_field=UBInt16("length")),
+)
+
+HostName = Struct(
+    "name",
+    UBInt16("length"),
+    Bytes("name", lambda ctx: ctx.length),
+)
+
+ServerNameList = Struct(
+    "ServerNameList",
+    SizeAtLeast(UBInt16("length"), min_size=1),
+    Array(lambda ctx: ctx.length, ServerName),
 )
 
 ClientHello = Struct(

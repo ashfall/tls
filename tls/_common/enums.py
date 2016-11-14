@@ -125,3 +125,7 @@ class ExtensionType(Enum):
 
 class CompressionMethod(Enum):
     NULL = 0
+
+
+class NameType(Enum):
+    HOST_NAME = 0
