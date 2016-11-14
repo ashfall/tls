@@ -6,8 +6,8 @@ from __future__ import absolute_import, division, print_function
 
 from functools import partial
 
-from construct import (Array, Bytes, PascalString, Struct, UBInt16, UBInt32,
-                       UBInt8)
+from construct import (Array, Bytes, PascalString, Struct, Switch, UBInt16,
+                       UBInt32, UBInt8)
 
 from tls._common import enums
 
@@ -70,8 +70,14 @@ CompressionMethods = Struct(
 
 ServerName = Struct(
     "server_name_list",
-    UBInt8("name_type"),
-    PascalString("name", length_field=UBInt16("length")),
+    EnumClass(UBInt8("name_type"), enums.NameType),
+    Switch("name",
+           lambda ctx: ctx.name_type,
+           {
+               enums.NameType.HOST_NAME: PascalString(
+                   "HostName", length_field=UBInt16("length")
+               )
+           })
 )
 
 HostName = Struct(
@@ -80,10 +86,27 @@ HostName = Struct(
     Bytes("name", lambda ctx: ctx.length),
 )
 
-ServerNameList = Struct(
-    "ServerNameList",
-    SizeAtLeast(UBInt16("length"), min_size=1),
-    Array(lambda ctx: ctx.length, ServerName),
+ServerNameList = TLSPrefixedArray(ServerName)
+
+SignatureAndHashAlgorithm = Struct(
+    "algorithms",
+    EnumClass(UBInt8("hash"), enums.HashAlgorithm),
+    EnumClass(UBInt8("signature"), enums.SignatureAlgorithm),
+)
+
+SupportedSignatureAlgorithms = TLSPrefixedArray(SignatureAndHashAlgorithm)
+
+Extensions = Struct(
+    "extensions",
+    TLSPrefixedArray(*EnumSwitch(
+        type_field=UBInt16("type"),
+        type_enum=enums.ExtensionType,
+        value_field="data",
+        value_choices={
+            enums.ExtensionType.SERVER_NAME: ServerName,
+            enums.ExtensionType.SIGNATURE_ALGORITHMS: SupportedSignatureAlgorithms,
+        }
+    ))
 )
 
 ClientHello = Struct(
@@ -95,8 +118,7 @@ ClientHello = Struct(
                                CipherSuites),
                      length_validator=partial(SizeAtLeast, min_size=1)),
     CompressionMethods,
-    UBInt16("extensions_length"),
-    Bytes("extensions_bytes", lambda ctx: ctx.extensions_length),
+    TLSPrefixedArray(Extensions),
 )
 
 ServerHello = Struct(
@@ -106,8 +128,7 @@ ServerHello = Struct(
     SessionID,
     Bytes("cipher_suite", 2),
     UBInt8("compression_method"),
-    UBInt16("extensions_length"),
-    Bytes("extensions_bytes", lambda ctx: ctx.extensions_length),
+    TLSPrefixedArray(Extensions),
 )
 
 ClientCertificateType = Struct(
@@ -116,32 +137,6 @@ ClientCertificateType = Struct(
     Array(lambda ctx: ctx.length, UBInt8("certificate_types")),
 )
 
-SignatureAndHashAlgorithm = Struct(
-    "algorithms",
-    UBInt8("hash"),
-    UBInt8("signature"),
-)
-
-SupportedSignatureAlgorithms = Struct(
-    "supported_signature_algorithms",
-    SizeAtLeast(UBInt16("supported_signature_algorithms_length"),
-                min_size=1),
-    Array(
-        lambda ctx: ctx.supported_signature_algorithms_length / 2,
-        SignatureAndHashAlgorithm,
-    ),
-)
-
-Extension = Struct(
-    "extensions",
-    *EnumSwitch(type_field=UBInt16("type"),
-                type_enum=enums.ExtensionType,
-                value_field="data",
-                value_choices={
-                    enums.ExtensionType.SERVER_NAME.value: ServerName,
-                    enums.ExtensionType.SIGNATURE_ALGORITHMS.value: SupportedSignatureAlgorithms,
-    })
-)
 
 DistinguishedName = Struct(
     "certificate_authorities",

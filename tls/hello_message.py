@@ -8,8 +8,6 @@ import attr
 
 from construct import Container
 
-from six import BytesIO
-
 from tls import _constructs
 
 from tls._common import enums
@@ -31,19 +29,6 @@ class Random(object):
     """
     gmt_unix_time = attr.ib()
     random_bytes = attr.ib()
-
-
-@attr.s
-class Extension(object):
-    """
-    An object representing an Extension struct.
-    """
-    type = attr.ib()
-    data = attr.ib()
-
-    def as_bytes(self):
-        return _constructs.Extension.build(Container(
-            type=self.type.value, length=len(self.data), data=self.data))
 
 
 @attr.s
@@ -74,9 +59,7 @@ class ClientHello(object):
                     length=len(self.compression_methods),
                     compression_methods=self.compression_methods
                 ),
-                extensions_length=sum([2 + 2 + len(ext.data)
-                                       for ext in self.extensions]),
-                extensions_bytes=b''.join(
+                extensions=b''.join(
                     [ext.as_bytes() for ext in self.extensions]
                 )
             )
@@ -94,13 +77,9 @@ class ClientHello(object):
         # XXX Is there a better way in Construct to parse an array of
         # variable-length structs?
         extensions = []
-        extensions_io = BytesIO(construct.extensions_bytes)
-        while extensions_io.tell() < construct.extensions_length:
-            extension_construct = _constructs.Extension.parse_stream(
-                extensions_io)
-            extensions.append(
-                Extension(type=enums.ExtensionType(extension_construct.type),
-                          data=extension_construct.data))
+        if construct.extensions:
+            extensions = _constructs.Extensions.parse(construct.extensions)
+
         return ClientHello(
             client_version=ProtocolVersion(
                 major=construct.version.major,
@@ -115,7 +94,7 @@ class ClientHello(object):
             compression_methods=(
                 construct.compression_methods.compression_methods
             ),
-            extensions=extensions,
+            extensions=extensions
         )
 
 
@@ -146,7 +125,7 @@ class ServerHello(object):
                 compression_method=self.compression_method.value,
                 extensions_length=sum([2 + 2 + len(ext.data)
                                        for ext in self.extensions]),
-                extensions_bytes=b''.join(
+                extensions=b''.join(
                     [ext.as_bytes() for ext in self.extensions]
                 )
             )
@@ -161,15 +140,11 @@ class ServerHello(object):
         :return: ServerHello object.
         """
         construct = _constructs.ServerHello.parse(bytes)
-        # XXX: Find a better way to parse extensions
-        extensions = []
-        extensions_io = BytesIO(construct.extensions_bytes)
-        while extensions_io.tell() < construct.extensions_length:
-            extension_construct = _constructs.Extension.parse_stream(
-                extensions_io)
-            extensions.append(
-                Extension(type=enums.ExtensionType(extension_construct.type),
-                          data=extension_construct.data))
+        if construct.extensions:
+            extensions = _constructs.Extensions.parse(construct.extensions)
+        else:
+            extensions = []
+
         return ServerHello(
             server_version=ProtocolVersion(
                 major=construct.version.major,
