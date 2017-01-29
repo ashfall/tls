@@ -352,8 +352,8 @@ class TestTLSPrefixedArrayWithCustomLengthFieldSize(object):
     def tls_array(self):
         """
         A :py:func:`tls._common._constructs.TLSPrefixedArray` of
-        :py:func:`construct.macros.UBInt8` where the legth prefix for the array
-        size is specified with a py:class`UBInt24` value.
+        :py:func:`construct.macros.UBInt8` where the length prefix for the array
+        size is specified with a :py:class`UBInt24` value.
         """
         return TLSPrefixedArray("digits", UBInt8("digit"),
                                 length_field_size=UBInt24)
@@ -362,9 +362,9 @@ class TestTLSPrefixedArrayWithCustomLengthFieldSize(object):
         """
         A :py:meth:`tls._common._constructs.TLSPrefixedArray` specialized on a
         given :py:func:`construct.Construct` encodes a sequence of objects as a
-        24-bit length (since ``TLSPrefixedArray.legth_field_size`` has been set
-        to ``UBInt24``, overriding the default ``UBInt16``) followed by each
-        object as encoded by that construct.
+        24-bit length (since ``TLSPrefixedArray.length_field_size`` has been
+        set to :py:class`UBInt24`, overriding the default :py:class`UBInt16`)
+        followed by each object as encoded by that construct.
         """
         assert tls_array.build(ints) == uint8_encoded
 
@@ -373,9 +373,9 @@ class TestTLSPrefixedArrayWithCustomLengthFieldSize(object):
         A :py:meth:`tls._common._constructs.TLSPrefixedArray` specialized on a
         given :py:func:`construct.Construct` decodes a binary sequence,
         prefixed by its 24-bit length (since
-        ``TLSPrefixedArray.legth_field_size`` has been set to ``UBInt24``,
-        overriding the default ``UBInt16``), as a :py:class:`list` of objects
-        decoded by that construct.
+        ``TLSPrefixedArray.length_field_size`` has been set to
+        :py:class`UBInt24`, overriding the default :py:class`UBInt16`), as a
+        :py:class:`list` of objects decoded by that construct.
         """
         assert tls_array.parse(uint8_encoded) == ints
 
@@ -385,7 +385,7 @@ class TestTLSPrefixedArrayWithCustomLengthFieldSize(object):
         length-prefixed binary sequence encoded by a
         :py:meth:`tls._common._constructs.TLSPrefixedArray` with a custom
         ``length_field_value`` of :py:class`UBInt24` overriding the default
-        `UBInt16` specialized on the same construct and vice versa.
+        :py:class`UBInt16` specialized on the same construct and vice versa.
         """
 
         parsed = tls_array.parse(uint8_encoded)
