@@ -383,8 +383,9 @@ class TestTLSPrefixedArrayWithCustomLengthFieldSize(object):
         """
         A :py:meth:`tls._common._constructs.TLSPrefixedArray` decodes a
         length-prefixed binary sequence encoded by a
-        :py:meth:`tls._common._constructs.TLSPrefixedArray` specialized on the
-        same construct and vice versa.
+        :py:meth:`tls._common._constructs.TLSPrefixedArray` with a custom
+        ``length_field_value`` of :py:class`UBInt24` overriding the default
+        `UBInt16` specialized on the same construct and vice versa.
         """
 
         parsed = tls_array.parse(uint8_encoded)
