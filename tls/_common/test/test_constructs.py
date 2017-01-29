@@ -292,9 +292,10 @@ class TestPrefixedBytesWithOverriddenLength(object):
     [([], b'\x00\x00' + b''),
      ([1, 2, 3], b'\x00\x03' + b'\x01\x02\x03'),
      ([1] * 65535, b'\xFF\xFF' + b'\x01' * 65535)])
-class TestTLSPrefixedArray(object):
+class TestTLSPrefixedArrayWithDefaultLengthFieldSize(object):
     """
-    Tests for :py:func:`tls._common._constructs.TLSPrefixedArray`.
+    Tests for :py:func:`tls._common._constructs.TLSPrefixedArray` where the
+    length_field is specified using a UBInt16 value.
     """
 
     @pytest.fixture
@@ -318,6 +319,57 @@ class TestTLSPrefixedArray(object):
         A :py:meth:`tls._common._constructs.TLSPrefixedArray` specialized on a
         given :py:func:`construct.Construct` decodes a binary sequence,
         prefixed by its 16-bit length, as a :py:class:`list` of objects decoded
+        by that construct.
+        """
+        assert tls_array.parse(uint8_encoded) == ints
+
+    def test_round_trip(self, tls_array, ints, uint8_encoded):
+        """
+        A :py:meth:`tls._common._constructs.TLSPrefixedArray` decodes a
+        length-prefixed binary sequence encoded by a
+        :py:meth:`tls._common._constructs.TLSPrefixedArray` specialized on the
+        same construct and vice versa.
+        """
+
+        parsed = tls_array.parse(uint8_encoded)
+        assert tls_array.build(parsed) == uint8_encoded
+        unparsed = tls_array.build(ints)
+        assert tls_array.parse(unparsed) == ints
+
+
+@pytest.mark.parametrize(
+    "ints,uint8_encoded",
+    [([], b'\x00\x00\x00' + b''),
+     ([1, 2, 3], b'\x00\x00\x03' + b'\x01\x02\x03'),
+     ([1] * 65535, b'\x00\xFF\xFF' + b'\x01' * 65535)])
+class TestTLSPrefixedArrayWithCustomLengthFieldSize(object):
+    """
+    Tests for :py:func:`tls._common._constructs.TLSPrefixedArray` where the
+    length_field is supplied by the user.
+    """
+
+    @pytest.fixture
+    def tls_array(self):
+        """
+        A :py:func:`tls._common._constructs.TLSPrefixedArray` of
+        :py:func:`construct.macros.UBInt8`.
+        """
+        return TLSPrefixedArray("digits", UBInt8("digit"),
+                                length_field_size=UBInt24)
+
+    def test_build(self, tls_array, ints, uint8_encoded):
+        """
+        A :py:meth:`tls._common._constructs.TLSPrefixedArray` specialized on a
+        given :py:func:`construct.Construct` encodes a sequence of objects as a
+        24-bit length followed by each object as encoded by that construct.
+        """
+        assert tls_array.build(ints) == uint8_encoded
+
+    def test_parse(self, tls_array, ints, uint8_encoded):
+        """
+        A :py:meth:`tls._common._constructs.TLSPrefixedArray` specialized on a
+        given :py:func:`construct.Construct` decodes a binary sequence,
+        prefixed by its 24-bit length, as a :py:class:`list` of objects decoded
         by that construct.
         """
         assert tls_array.parse(uint8_encoded) == ints

@@ -73,7 +73,8 @@ def PrefixedBytes(name, length_field=construct.UBInt8("length")):  # noqa
     )
 
 
-def TLSPrefixedArray(name, subcon, length_validator=None, length_field_size=construct.UBInt16):  # noqa
+def TLSPrefixedArray(name, subcon, length_validator=None,
+                     length_field_size=construct.UBInt16):
     """
     The `TLS vector type`_.  It specializes on another
     :py:class:`construct.Construct` and then encodes or decodes an
