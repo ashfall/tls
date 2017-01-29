@@ -6,11 +6,13 @@ from __future__ import absolute_import, division, print_function
 
 from construct.adapters import ValidationError
 
+from cryptography import x509
+
 import pytest
 
 from tls._common import enums
 
-from tls.exceptions import TLSValidationException
+from tls.exceptions import BadCertificateException, TLSValidationException
 
 from tls.hello_message import ClientHello, ProtocolVersion, ServerHello
 
@@ -131,7 +133,7 @@ class TestCertificateRequestParsing(object):
         assert exc_info.value.args == ('invalid object', 0)
 
 
-class TestServerDHParamsparsing(object):
+class TestServerDHParamsParsing(object):
     """
     Tests for parsing of ServerDHParams struct.
     """
@@ -170,49 +172,75 @@ class TestPreMasterSecretParsing(object):
         assert record.random == r
 
 
-class TestASN1CertificateSerialization(object):
+class TestASN1Certificate(object):
     """
     Tests for serializing :py:class:`tls.message.ASN1Cert`
     """
+    good_cert = (
+        b'0\x82\x04\x800\x82\x03h\xa0\x03\x02\x01\x02\x02\x08!@\x15\x1d\x89\xf1\xa3\x1a0\r\x06\t*\x86H\x86\xf7\r\x01\x01\x0b\x05\x000I1\x0b0\t\x06\x03U\x04\x06\x13\x02US1\x130\x11\x06\x03U\x04\n\x13\nGoogle Inc1%0#\x06\x03U\x04\x03\x13\x1cGoogle Internet Authority G20\x1e\x17\r170118185000Z\x17\r170412185000Z0h1\x0b0\t\x06\x03U\x04\x06\x13\x02US1\x130\x11\x06\x03U\x04\x08\x0c\nCalifornia1\x160\x14\x06\x03U\x04\x07\x0c\rMountain View1\x130\x11\x06\x03U\x04\n\x0c\nGoogle Inc1\x170\x15\x06\x03U\x04\x03\x0c\x0ewww.google.com0\x82\x01"0\r\x06\t*\x86H\x86\xf7\r\x01\x01\x01\x05\x00\x03\x82\x01\x0f\x000\x82\x01\n\x02\x82\x01\x01\x00\xcdE\xc4\xb3\xd6k[\xff\x92v\xe9\xaa\xe9\x98\x18\x82\x99#n\xbb\x05\xd3r\xfa\x1f\xd2\xfb\xeb\x0b\x8bB\xfaR!z>x\xf1\x89\xd0\xabD2C%\xef\'\x0f\xb2\xb0i\xc5\x80\xf2\x05\t\xdf)K\x86s\x07\xd4B)n\\\xf5f\x07\xebzL\xed\xb9/\xbc\x9a\x91\xd3\xc0\xdb\xd9\xd8u\xc7\xa4\xb5\x86\x94_}^\xbc\xc7\x9e\xf6\xc5z\xf5\xce\xd1\x00\x8e\xd3XO\xbc\xb2d~\x11t\x80\x7f7vm\x84\x89RQ\xee\'Z\xc0\x013\x1d\x86\xe5x\x91\x91\xe3\xa7\x8bU>\xdb\xc2_\x8d\x07\x9f\x81?\x94Z\x86\xb6uQ-\xf7r2\x9c\x91\x06\xca\xfe\xc9\xf5S\xd2\xfc\x98\xf9\xc5\xbe\xcdC\n\x89r\xa6Pg\xad\xee\xd4\xe6+\n\xf7\xf8\xde\xb7qx\xc0\x81\x8f\\\xf6\x1d\x15\x85\xebL\x07&\x0c\xd5\x81L\xefa\xe4\xf6"\x9b\xdb\x1eF\x0eX\xa5\xebvQ\xf1F\xdf\x90X~\xd7\x89=\xdb\x87\xfc\x81\x99\r\xb6\x80\xe0\xad\x8d\x91&\xa7%\xbbX_\xec\xb41@\xe3\x99\x9b\x02\x03\x01\x00\x01\xa3\x82\x01K0\x82\x01G0\x1d\x06\x03U\x1d%\x04\x160\x14\x06\x08+\x06\x01\x05\x05\x07\x03\x01\x06\x08+\x06\x01\x05\x05\x07\x03\x020\x19\x06\x03U\x1d\x11\x04\x120\x10\x82\x0ewww.google.com0h\x06\x08+\x06\x01\x05\x05\x07\x01\x01\x04\\0Z0+\x06\x08+\x06\x01\x05\x05\x070\x02\x86\x1fhttp://pki.google.com/GIAG2.crt0+\x06\x08+\x06\x01\x05\x05\x070\x01\x86\x1fhttp://clients1.google.com/ocsp0\x1d\x06\x03U\x1d\x0e\x04\x16\x04\x14\x99z\x8c\xf8\xccu\x81\xdd9\xf4\xb9\xd1\x8e\xa6\xa7\xcb\xf1&^\xfa0\x0c\x06\x03U\x1d\x13\x01\x01\xff\x04\x020\x000\x1f\x06\x03U\x1d#\x04\x180\x16\x80\x14J\xdd\x06\x16\x1b\xbc\xf6h\xb5v\xf5\x81\xb6\xbbb\x1a\xbaZ\x81/0!\x06\x03U\x1d \x04\x1a0\x180\x0c\x06\n+\x06\x01\x04\x01\xd6y\x02\x05\x010\x08\x06\x06g\x81\x0c\x01\x02\x0200\x06\x03U\x1d\x1f\x04)0\'0%\xa0#\xa0!\x86\x1fhttp://pki.google.com/GIAG2.crl0\r\x06\t*\x86H\x86\xf7\r\x01\x01\x0b\x05\x00\x03\x82\x01\x01\x00\x1aLb\x18?\xda5\x9f?M^l\xfe\x06\xe8A\xbd\xc8\x80\xd8\xa30\x86\x9c\xb6\xaf\x96\xf2\xcc\x11X\xa4\xd9\xd8\xde\xae?o\x95\x17\x8f\xc2\x9a\xa6\xe5O\xbd\xe4\x86v)\x8c\xca\xc90\xf8\x11\xc9v1\xa6\xc73z\xdao\x17E\xa6QUc\x0c\xbc\x81\xf2\xb1\xd9v\xd3\x12\xce \xad\xd8\x96c\xe9#\x12Y\xa18\x12\xdb\x86P\xc2\xb1\x87\x81\x89\x1bGi5\xfd\x00\x8c\x11f6\x0f\x1d\xe3\xddE\xecld\xa7U\xea$\xfd\xe0U\xe3\xa0\xe7b\x84\xcc\xf1\xb2L\xf46@TFx\x93\xbat?\xf4}\xbf\xf0\x9cA2\x05\x0e\x8e\x9d\xf2\xed\xae\xdd\rf\x1e\xf8\xa3\xfe\xf7\r\x7f\xf4\xcaTo[\x06\x19f\xd6\xf8;\xa3\xf6\xc3\xa4\xbd-\xf6\xad\x089\x81)\xc6\xb4Aug\x14\x04\x0c\x16\x83\x13\x16\xaa\xc6,Zp\x8c4\x9e\'\x0c\x1ck\xd3\x83\xe2@\x89\x959\x9d<=\x8c\n\xca]\x91W\xba\xe8\x84\xf8\x91\xb7\xf7\x03\x96T\x9bd?Q\xe2\x81_fq\xd8wt\xc2'
+    )
+
+    asn1_cert_bytes = (
+        b'\x00\x04\x84'  # ASN1Cert.length
+    ) + good_cert  # ASN1Cert.asn1_cert
+
+
+    def test_from_bytes(self):
+        """
+
+        """
+        record = ASN1Cert.from_bytes(self.asn1_cert_bytes)
+        assert isinstance(record, ASN1Cert)
+        assert isinstance(record.asn1_cert, x509.Certificate)
+
 
     def test_as_bytes(self):
         """
         :py:meth:`tls.message.ASN1Cert.as_bytes` constructs a valid
         packet.
         """
-        packet = (
-            b'\x00\x00\x03'     # length
-            b'ABC'                  # asn1_cert
+        record = ASN1Cert.from_bytes(self.asn1_cert_bytes)
+        assert record.as_bytes() == self.asn1_cert_bytes
+
+    def test_as_bytes_bad_cert(self):
+        """
+        :py:meth:`tls.message.ASN1Cert.as_bytes` fails to construct a
+        packet whose ``asn1_cert`` contains bad X509 bytes.
+        """
+        record = ASN1Cert.from_bytes(self.asn1_cert_bytes)
+        record.asn1_cert = b"abcd"
+        with pytest.raises(BadCertificateException):
+            record.as_bytes()
+
+    def test_from_bytes_bad_cert(self):
+        """
+        :py:meth:`tls.message.ASN1Cert.from_bytes` raises a
+        ``BadCertificateException`` when corrupted certificate bytes are used.
+        "corrupted" here means values that ``cryptography.x509`` fails to load
+        as a ``x509.Certificate``.
+        """
+        bad_packet = (
+            b'\x00\x00\x04'  # ASN1Cert.length
+            b'abcd'  # ASN1Cert.asn1_cert
         )
-        assert ASN1Cert(asn1_cert=b"ABC").as_bytes() == packet
-
-    def test_as_bytes_too_long(self):
-        """
-        :py:meth:`tls.message.ASN1Cert.as_bytes` fails to construct a
-        packet whose ``asn1_cert`` would be too long.
-        """
-        record = ASN1Cert(asn1_cert=b"a" * 2 ** 24)
-        with pytest.raises(ValidationError):
-            record.as_bytes()
-
-    def test_as_bytes_too_short(self):
-        """
-        :py:meth:`tls.message.ASN1Cert.as_bytes` fails to construct a
-        packet whose ``asn1_cert`` would be too short.
-        """
-        record = ASN1Cert(asn1_cert=b"")
-        with pytest.raises(ValidationError):
-            record.as_bytes()
+        with pytest.raises(BadCertificateException):
+            ASN1Cert.from_bytes(bad_packet)
 
 
 class TestCertificateParsing(object):
     """
     Tests for parsing of :py:class:`tls.message.Certificate` messages.
     """
+
     packet = (
         b'\x00\x00\x06'  # certificate_length
         b'\x00\x00\x03'  # certificate_list.asn1_cert length
         b'ABC'  # certificate_list.asn1_cert
+    )
+
+
+    good_certs_packet = (
+        b'\x00\x0c\x02'  # certificate_list_len
     )
 
     certificates_too_short = (
@@ -226,6 +254,8 @@ class TestCertificateParsing(object):
         :py:meth:`tls.message.Certificate.from_bytes` parses a valid
         packet.
         """
+
+        import pdb; pdb.set_trace()
         record = Certificate.from_bytes(self.packet)
         assert isinstance(record, Certificate)
         assert len(record.certificate_list) == 1

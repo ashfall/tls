@@ -23,3 +23,7 @@ class UnsupportedExtensionException(TLSException):
 
 class TLSValidationException(TLSException):
     pass
+
+
+class BadCertificateException(TLSException):
+    pass

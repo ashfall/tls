@@ -8,9 +8,19 @@ import attr
 
 from construct import Container, ListContainer
 
+from cryptography import x509
+
+from cryptography.hazmat.backends import default_backend
+
+from cryptography.hazmat.primitives import serialization
+
+from six import BytesIO
+
 from tls import _constructs
 
 from tls._common import enums
+
+from tls.exceptions import BadCertificateException
 
 from tls.hello_message import ClientHello, ProtocolVersion, ServerHello
 
@@ -151,13 +161,33 @@ class ASN1Cert(object):
     """
     An object representing ASN.1 Certificate
     """
-    asn1_cert = attr.ib()
+    asn1_cert = attr.ib() #validator=attr.validators.instance_of(x509.Certificate))
 
     def as_bytes(self):
+        # get cert bytes from cryptography.x509
+        try:
+            asn1_cert_bytes = self.asn1_cert.public_bytes(encoding=serialization.Encoding.DER)
+        except:
+            raise BadCertificateException
+
         return _constructs.ASN1Cert.build(Container(
-            length=len(self.asn1_cert),
-            asn1_cert=self.asn1_cert
+            length=len(asn1_cert_bytes),
+            asn1_cert=asn1_cert_bytes,
         ))
+
+
+    @classmethod
+    def from_bytes(cls, bytes):
+        """
+        """
+        construct = _constructs.ASN1Cert.parse(bytes)
+        # TODO catch errors that cryptogrpahy sends and raise them accordingly.
+        try:
+            asn1_cert = x509.load_der_x509_certificate(construct.asn1_cert, default_backend())
+        except:
+            raise BadCertificateException
+        assert isinstance(asn1_cert, x509.Certificate)
+        return cls(asn1_cert=asn1_cert)
 
 
 @attr.s
