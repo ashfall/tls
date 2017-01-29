@@ -352,8 +352,8 @@ class TestTLSPrefixedArrayWithCustomLengthFieldSize(object):
     def tls_array(self):
         """
         A :py:func:`tls._common._constructs.TLSPrefixedArray` of
-        :py:func:`construct.macros.UBInt8` where the length prefix for the array
-        size is specified with a :py:class`UBInt24` value.
+        :py:func:`construct.macros.UBInt8` where the length prefix for the
+        array size is specified with a :py:class`UBInt24` value.
         """
         return TLSPrefixedArray("digits", UBInt8("digit"),
                                 length_field_size=UBInt24)
