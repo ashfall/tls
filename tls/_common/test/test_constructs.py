@@ -341,7 +341,8 @@ class TestTLSPrefixedArrayWithDefaultLengthFieldSize(object):
     "ints,uint8_encoded",
     [([], b'\x00\x00\x00' + b''),
      ([1, 2, 3], b'\x00\x00\x03' + b'\x01\x02\x03'),
-     ([1] * 65535, b'\x00\xFF\xFF' + b'\x01' * 65535)])
+     ([1] * 65535, b'\x00\xFF\xFF' + b'\x01' * 65535),
+     ([1] * 16777215, b'\xFF\xFF\xFF' + b'\x01' * 16777215),])
 class TestTLSPrefixedArrayWithCustomLengthFieldSize(object):
     """
     Tests for :py:func:`tls._common._constructs.TLSPrefixedArray` where the

@@ -112,7 +112,7 @@ def TLSPrefixedArray(name, subcon, length_validator=None,  # noqa
     return construct.TunnelAdapter(
         PrefixedBytes(name,
                       length_field=length_field),
-        construct.Range(0, 2 ** 16 - 1, subcon)
+        construct.Range(0, 2 ** (length_field.sizeof() * 8) - 1, subcon)
     )
 
 
