@@ -164,7 +164,6 @@ class ASN1Cert(object):
     asn1_cert = attr.ib() #validator=attr.validators.instance_of(x509.Certificate))
 
     def as_bytes(self):
-        # get cert bytes from cryptography.x509
         try:
             asn1_cert_bytes = self.asn1_cert.public_bytes(encoding=serialization.Encoding.DER)
         except:
@@ -181,7 +180,6 @@ class ASN1Cert(object):
         """
         """
         construct = _constructs.ASN1Cert.parse(bytes)
-        # TODO catch errors that cryptogrpahy sends and raise them accordingly.
         try:
             asn1_cert = x509.load_der_x509_certificate(construct.asn1_cert, default_backend())
         except:
@@ -198,9 +196,11 @@ class Certificate(object):
     certificate_list = attr.ib()
 
     def as_bytes(self):
+        certificate_list = [asn1_cert.as_bytes()
+                            for asn1_cert in self.certificate_list]
+
         return _constructs.Certificate.build(Container(
-            certificate_list=[Container(asn1_cert=cert.asn1_cert)
-                              for cert in self.certificate_list]
+            certificate_list=certificate_list
         ))
 
     @classmethod
@@ -214,6 +214,10 @@ class Certificate(object):
         construct = _constructs.Certificate.parse(bytes)
         return cls(
             certificate_list=[
+                # TODO Use ASN1Cert.from_bytes here. The problem is that line
+                # 214 above parses the ASN1Cert bytes too in thecert lis, we
+                # need the raw length prefixed bytes to call
+                # ASN1Cert.from_bytes()
                 ASN1Cert(
                     asn1_cert=asn1cert.asn1_cert
                 )

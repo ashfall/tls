@@ -255,7 +255,6 @@ class TestCertificateParsing(object):
         packet.
         """
 
-        import pdb; pdb.set_trace()
         record = Certificate.from_bytes(self.packet)
         assert isinstance(record, Certificate)
         assert len(record.certificate_list) == 1
