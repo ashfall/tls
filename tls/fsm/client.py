@@ -1,3 +1,9 @@
+# This file is dual licensed under the terms of the Apache License, Version
+# 2.0, and the BSD License. See the LICENSE file in the root of this repository
+# for complete details.
+
+from __future__ import absolute_import, division, print_function
+
 from automat import MethodicalMachine
 
 
@@ -77,6 +83,25 @@ class TLSClient(object):
         """
 
     @_machine.state()
+    def waiting_for_server_key_exchange(self):
+        """
+        Waiting for a ServerKeyExchange message.
+        """
+
+    @_machine.input()
+    def received_server_key_exchange(self):
+        """
+        We got a ServerKeyExchange.
+        """
+
+    @_machine.output()
+    def _process_server_key_exchange(self):
+        """
+        Actually act ServerKeyExchange.
+        """
+        return "processed ServerKeyExchange"
+
+    @_machine.state()
     def waiting_for_server_hello_done(self):
         """
         We got a ServerHello and now we're waiting for a ServerHelloDone.
@@ -89,7 +114,7 @@ class TLSClient(object):
         """
         return "processed ServerHello"
 
-    @_machine.state()
+    @_machine.input()
     def received_server_hello_done(self):
         """
         Received a ServerHelloDone.
@@ -108,8 +133,8 @@ class TLSClient(object):
         """
         return "cleaned up after ServerHelloDone"
 
-    @_machine.input()
-    def received_server_hello_done(self):
+    @_machine.output()
+    def _process_server_hello_done(self):
         """
         We got a ServerHelloDone
         """
@@ -193,12 +218,19 @@ class TLSClient(object):
                                    outputs=[_emit_client_hello])
 
     waiting_for_server_hello.upon(received_server_hello,
-                                  enter=waiting_for_server_hello_done,
+                                  enter=waiting_for_server_key_exchange,
                                   outputs=[_process_server_hello])
 
-    waiting_for_server_hello.upon(server_hello_wait_expired,
-                                  enter=dead,
-                                  outputs=[_cleanup_after_expired_client_hello])
+    waiting_for_server_hello.upon(
+        server_hello_wait_expired,
+        enter=dead,
+        outputs=[_cleanup_after_expired_client_hello],
+    )
+
+    waiting_for_server_key_exchange.upon(
+        received_server_key_exchange,
+        enter=waiting_for_server_hello_done,
+        outputs=[_process_server_key_exchange])
 
     waiting_for_server_hello_done.upon(received_server_hello_done,
                                        enter=want_to_send_client_key_exchange,
